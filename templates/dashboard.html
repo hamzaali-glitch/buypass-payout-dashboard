@@ -1,40 +1,30 @@
 {% extends "base.html" %}
-{% block title %}{{ period.period_label }} - BuyPass Payout Dashboard{% endblock %}
+{% block title %}{{ period.period_label }} - PayoutWatch{% endblock %}
+
+{% block header_controls %}
+<select id="periodSelector" class="period-select">
+    {% for p in periods %}
+    <option value="{{ p.id }}" {% if p.id == current_period_id %}selected{% endif %}>
+        {{ p.period_label }}
+    </option>
+    {% endfor %}
+</select>
+{% endblock %}
 
 {% block content %}
-<!-- Period Selector -->
-<div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
-    <div class="d-flex align-items-center gap-3">
-        <h5 class="mb-0 fw-bold" style="color:#374151">
-            <i class="bi bi-calendar-week text-primary me-2"></i>Payout Period
-        </h5>
-        <select id="periodSelector" class="form-select period-selector" style="width:auto">
-            {% for p in periods %}
-            <option value="{{ p.id }}" {% if p.id == current_period_id %}selected{% endif %}>
-                {{ p.period_label }}
-            </option>
-            {% endfor %}
-        </select>
-    </div>
-    <div class="text-muted small d-flex align-items-center gap-2">
-        <i class="bi bi-clock"></i>
-        <span>Updated: {{ period.upload_time }}</span>
-    </div>
-</div>
-
-<!-- Stats Cards -->
+<!-- Stat Cards -->
 <div class="row g-3 mb-4">
     <div class="col-xl-3 col-md-6">
-        <div class="card stat-card p-3">
+        <div class="card stat-card">
             <div class="d-flex align-items-center gap-3">
-                <div class="stat-icon" style="background:#DBEAFE;color:#2563EB"><i class="bi bi-shop"></i></div>
+                <div class="stat-icon" style="background:rgba(7,119,255,0.1);color:#0777FF"><i class="bi bi-shop"></i></div>
                 <div class="flex-grow-1">
-                    <div class="text-muted small fw-semibold">Total Sellers</div>
+                    <div class="stat-label">Total Sellers</div>
                     <div class="d-flex align-items-center gap-2">
-                        <div class="fs-4 fw-bold" style="color:#1E293B">{{ totals.total_sellers }}</div>
+                        <div class="stat-value">{{ totals.total_sellers }}</div>
                         {% if comparison %}
                         <span class="stat-delta {{ 'delta-up' if comparison.sellers_delta >= 0 else 'delta-down' }}">
-                            <i class="bi bi-{{ 'arrow-up' if comparison.sellers_delta >= 0 else 'arrow-down' }}"></i>
+                            <i class="bi bi-{{ 'arrow-up' if comparison.sellers_delta >= 0 else 'arrow-down' }}" style="font-size:8px"></i>
                             {{ comparison.sellers_delta|abs }} ({{ comparison.sellers_pct }}%)
                         </span>
                         {% endif %}
@@ -44,16 +34,16 @@
         </div>
     </div>
     <div class="col-xl-3 col-md-6">
-        <div class="card stat-card p-3">
+        <div class="card stat-card">
             <div class="d-flex align-items-center gap-3">
-                <div class="stat-icon" style="background:#FEF3C7;color:#D97706"><i class="bi bi-cart3"></i></div>
+                <div class="stat-icon" style="background:rgba(245,166,35,0.1);color:#F5A623"><i class="bi bi-cart3"></i></div>
                 <div class="flex-grow-1">
-                    <div class="text-muted small fw-semibold">Total Orders</div>
+                    <div class="stat-label">Total Orders</div>
                     <div class="d-flex align-items-center gap-2">
-                        <div class="fs-4 fw-bold" style="color:#1E293B">{{ totals.total_orders }}</div>
+                        <div class="stat-value">{{ totals.total_orders }}</div>
                         {% if comparison %}
                         <span class="stat-delta {{ 'delta-up' if comparison.orders_delta >= 0 else 'delta-down' }}">
-                            <i class="bi bi-{{ 'arrow-up' if comparison.orders_delta >= 0 else 'arrow-down' }}"></i>
+                            <i class="bi bi-{{ 'arrow-up' if comparison.orders_delta >= 0 else 'arrow-down' }}" style="font-size:8px"></i>
                             {{ comparison.orders_delta|abs }} ({{ comparison.orders_pct }}%)
                         </span>
                         {% endif %}
@@ -63,16 +53,16 @@
         </div>
     </div>
     <div class="col-xl-3 col-md-6">
-        <div class="card stat-card p-3">
+        <div class="card stat-card">
             <div class="d-flex align-items-center gap-3">
-                <div class="stat-icon" style="background:#D1FAE5;color:#059669"><i class="bi bi-cash-stack"></i></div>
+                <div class="stat-icon" style="background:rgba(0,204,122,0.1);color:#00CC7A"><i class="bi bi-cash-stack"></i></div>
                 <div class="flex-grow-1">
-                    <div class="text-muted small fw-semibold">Total Payout</div>
+                    <div class="stat-label">Total Payout</div>
                     <div class="d-flex align-items-center gap-2">
-                        <div class="fs-5 fw-bold" style="color:#1E293B;white-space:nowrap">Rs. {{ "{:,.0f}".format(totals.total_payout) }}</div>
+                        <div class="stat-value" style="font-size:16px;white-space:nowrap">Rs. {{ "{:,.0f}".format(totals.total_payout) }}</div>
                         {% if comparison %}
                         <span class="stat-delta {{ 'delta-up' if comparison.payout_delta >= 0 else 'delta-down' }}">
-                            <i class="bi bi-{{ 'arrow-up' if comparison.payout_delta >= 0 else 'arrow-down' }}"></i>
+                            <i class="bi bi-{{ 'arrow-up' if comparison.payout_delta >= 0 else 'arrow-down' }}" style="font-size:8px"></i>
                             {{ comparison.payout_pct }}%
                         </span>
                         {% endif %}
@@ -82,16 +72,16 @@
         </div>
     </div>
     <div class="col-xl-3 col-md-6">
-        <div class="card stat-card p-3">
+        <div class="card stat-card">
             <div class="d-flex align-items-center gap-3">
-                <div class="stat-icon" style="background:#EDE9FE;color:#7C3AED"><i class="bi bi-receipt"></i></div>
+                <div class="stat-icon" style="background:rgba(91,141,239,0.1);color:#5B8DEF"><i class="bi bi-receipt"></i></div>
                 <div class="flex-grow-1">
-                    <div class="text-muted small fw-semibold">Avg. Order Value</div>
+                    <div class="stat-label">Avg. Order Value</div>
                     <div class="d-flex align-items-center gap-2">
-                        <div class="fs-5 fw-bold" style="color:#1E293B;white-space:nowrap">Rs. {{ "{:,.0f}".format(totals.avg_order) }}</div>
+                        <div class="stat-value" style="font-size:16px;white-space:nowrap">Rs. {{ "{:,.0f}".format(totals.avg_order) }}</div>
                         {% if comparison %}
                         <span class="stat-delta {{ 'delta-up' if comparison.avg_delta >= 0 else 'delta-down' }}">
-                            <i class="bi bi-{{ 'arrow-up' if comparison.avg_delta >= 0 else 'arrow-down' }}"></i>
+                            <i class="bi bi-{{ 'arrow-up' if comparison.avg_delta >= 0 else 'arrow-down' }}" style="font-size:8px"></i>
                             {{ comparison.avg_pct }}%
                         </span>
                         {% endif %}
@@ -102,57 +92,42 @@
     </div>
 </div>
 
-<!-- Search & Filter Bar -->
-<div class="section-title">
-    <i class="bi bi-people"></i> Seller Directory
-</div>
-<div class="card p-3 mb-3">
-    <div class="row align-items-center g-2">
-        <div class="col-md-5">
-            <div class="position-relative">
-                <i class="bi bi-search search-icon"></i>
-                <input type="text" id="searchInput" class="form-control search-box" placeholder="Search seller by store name...">
-            </div>
-        </div>
-        <div class="col-md-3">
-            <select id="bizTypeFilter" class="form-select" style="border-radius:10px">
-                <option value="">All Business Types</option>
-            </select>
-        </div>
-        <div class="col-md-2">
-            <select id="statusFilter" class="form-select" style="border-radius:10px">
-                <option value="">All Sellers</option>
-                <option value="with_orders">With Orders</option>
-                <option value="no_orders">No Orders</option>
-            </select>
-        </div>
-        <div class="col-md-2 text-end">
-            <span class="badge bg-primary bg-opacity-10 text-primary px-3 py-2 fw-semibold" id="resultCount">{{ sellers|length }} sellers</span>
-        </div>
+<!-- Filter Row -->
+<div class="d-flex align-items-center gap-2 flex-wrap mb-3">
+    <div class="position-relative" style="min-width:240px">
+        <i class="bi bi-search search-icon"></i>
+        <input type="text" id="searchInput" class="search-input" placeholder="Search seller...">
     </div>
+    <select id="bizTypeFilter" class="filter-select">
+        <option value="">All Types</option>
+    </select>
+    <select id="statusFilter" class="filter-select">
+        <option value="">All Sellers</option>
+        <option value="with_orders">With Orders</option>
+        <option value="no_orders">No Orders</option>
+    </select>
+    <span class="count-chip" id="resultCount">{{ sellers|length }}</span>
 </div>
 
 <!-- Sellers Table -->
 <div class="card" style="overflow:hidden">
-    <div class="table-responsive" style="max-height:600px; overflow-y:auto;">
-        <table class="table table-hover mb-0" id="sellerTable">
+    <div style="max-height:520px; overflow-y:auto;">
+        <table class="table-modern" id="sellerTable">
             <thead>
                 <tr>
-                    <th data-sort="index" style="width:50px">#</th>
+                    <th data-sort="index" style="width:40px">#</th>
                     <th data-sort="store">Store Name</th>
                     <th data-sort="biz_type">Type</th>
                     <th data-sort="total_orders" class="text-center">Orders</th>
-                    <th data-sort="amount" class="text-end">Payout Amount</th>
-                    <th class="text-center" style="width:70px">View</th>
+                    <th data-sort="amount" class="text-end">Payout</th>
+                    <th class="text-center" style="width:50px"></th>
                 </tr>
             </thead>
             <tbody id="sellerBody">
                 {% for s in sellers %}
                 <tr class="seller-row" data-store="{{ s.store }}" data-biztype="{{ s.biz_type }}" data-orders="{{ s.total_orders }}">
-                    <td class="text-muted fw-semibold">{{ loop.index }}</td>
-                    <td>
-                        <div class="fw-semibold" style="color:#1E293B">{{ s.store }}</div>
-                    </td>
+                    <td style="color:var(--muted);font-weight:600">{{ loop.index }}</td>
+                    <td style="font-weight:600;color:var(--primary)">{{ s.store }}</td>
                     <td>
                         {% set biz_class = {
                             'Exclusive': 'badge-exclusive',
@@ -162,13 +137,11 @@
                         }.get(s.biz_type, 'badge-default') %}
                         <span class="badge-biz {{ biz_class }}">{{ s.biz_type }}</span>
                     </td>
-                    <td class="text-center">
-                        <span class="fw-semibold">{{ s.total_orders }}</span>
-                    </td>
+                    <td class="text-center" style="font-weight:600">{{ s.total_orders }}</td>
                     <td class="text-end amount-col">Rs. {{ "{:,.0f}".format(s.amount) }}</td>
                     <td class="text-center">
-                        <button class="btn btn-sm btn-outline-primary view-btn" data-store="{{ s.store }}" style="border-radius:8px; width:32px; height:32px; padding:0;">
-                            <i class="bi bi-eye-fill" style="font-size:14px"></i>
+                        <button class="view-btn" data-store="{{ s.store }}">
+                            <i class="bi bi-eye"></i>
                         </button>
                     </td>
                 </tr>
@@ -182,23 +155,23 @@
 <div class="modal fade" id="sellerModal" tabindex="-1">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content">
-            <div class="modal-header py-3">
+            <div class="modal-header">
                 <h5 class="modal-title d-flex align-items-center gap-2">
-                    <i class="bi bi-shop"></i>
+                    <i class="bi bi-shop" style="color:var(--bp-blue)"></i>
                     <span id="modalStoreName"></span>
                 </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" style="font-size:10px"></button>
             </div>
             <div class="modal-body" id="modalBody">
                 <div class="text-center py-4">
-                    <div class="spinner-border text-primary"></div>
-                    <p class="mt-2 text-muted">Loading seller details...</p>
+                    <div class="spinner-border text-primary" style="width:24px;height:24px;border-width:2px"></div>
+                    <p class="mt-2" style="color:var(--secondary);font-size:11px">Loading...</p>
                 </div>
             </div>
-            <div class="modal-footer" id="modalFooter" style="display:none; border-top:1px solid #E5E7EB;">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" style="border-radius:8px">Close</button>
-                <button type="button" class="btn btn-bp" id="downloadInvoiceBtn" style="border-radius:8px">
-                    <i class="bi bi-file-earmark-pdf me-1"></i> Download Invoice
+            <div class="modal-footer" id="modalFooter" style="display:none;">
+                <button type="button" class="pill" data-bs-dismiss="modal" style="border:1px solid var(--input-border)">Close</button>
+                <button type="button" class="btn-export" id="downloadInvoiceBtn">
+                    <i class="bi bi-file-earmark-pdf"></i> Download Invoice
                 </button>
             </div>
         </div>
@@ -216,71 +189,59 @@ const bizTypeFilter = document.getElementById('bizTypeFilter');
 const statusFilter = document.getElementById('statusFilter');
 const resultCount = document.getElementById('resultCount');
 
-// ===== Period selector =====
+// Period selector
 document.getElementById('periodSelector').addEventListener('change', function() {
     window.location.href = '/dashboard/' + this.value;
 });
 
-// ===== Populate business type filter =====
+// Populate biz type filter
 const bizTypes = [...new Set(sellers.map(s => s.biz_type))].sort();
 bizTypes.forEach(t => {
     const opt = document.createElement('option');
-    opt.value = t;
-    opt.textContent = t;
+    opt.value = t; opt.textContent = t;
     bizTypeFilter.appendChild(opt);
 });
 
-// ===== Filter =====
+// Filter
 function filterSellers() {
     const q = searchInput.value.toLowerCase().trim();
     const biz = bizTypeFilter.value;
     const status = statusFilter.value;
     const rows = tbody.querySelectorAll('.seller-row');
     let count = 0;
-
     rows.forEach(row => {
         const store = row.dataset.store.toLowerCase();
         const rowBiz = row.dataset.biztype;
         const orders = parseInt(row.dataset.orders);
-
         let show = true;
         if (q && !store.includes(q)) show = false;
         if (biz && rowBiz !== biz) show = false;
         if (status === 'with_orders' && orders === 0) show = false;
         if (status === 'no_orders' && orders > 0) show = false;
-
         row.style.display = show ? '' : 'none';
-        if (show) {
-            count++;
-            row.children[0].textContent = count;
-        }
+        if (show) { count++; row.children[0].textContent = count; }
     });
-
-    resultCount.textContent = count + ' seller' + (count !== 1 ? 's' : '');
+    resultCount.textContent = count;
 }
-
 searchInput.addEventListener('input', filterSellers);
 bizTypeFilter.addEventListener('change', filterSellers);
 statusFilter.addEventListener('change', filterSellers);
 
-// ===== Sorting =====
+// Sorting
 let sortCol = null, sortAsc = true;
-document.querySelectorAll('#sellerTable th[data-sort]').forEach(th => {
+document.querySelectorAll('.table-modern th[data-sort]').forEach(th => {
     th.addEventListener('click', () => {
         const col = th.dataset.sort;
         if (sortCol === col) sortAsc = !sortAsc;
         else { sortCol = col; sortAsc = true; }
-
         const rowsArr = Array.from(tbody.querySelectorAll('.seller-row'));
         rowsArr.sort((a, b) => {
             let va, vb;
             if (col === 'store') {
-                va = a.dataset.store.toLowerCase();
-                vb = b.dataset.store.toLowerCase();
+                va = a.dataset.store.toLowerCase(); vb = b.dataset.store.toLowerCase();
                 return sortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
             } else if (col === 'biz_type') {
-                va = a.dataset.biztype.toLowerCase();
-                vb = b.dataset.biztype.toLowerCase();
+                va = a.dataset.biztype.toLowerCase(); vb = b.dataset.biztype.toLowerCase();
                 return sortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
             } else if (col === 'amount') {
                 va = parseFloat(a.querySelector('.amount-col').textContent.replace(/[^0-9.-]/g, ''));
@@ -294,7 +255,6 @@ document.querySelectorAll('#sellerTable th[data-sort]').forEach(th => {
             }
         });
         rowsArr.forEach(r => tbody.appendChild(r));
-
         document.querySelectorAll('.sort-arrow').forEach(el => el.remove());
         const arrow = document.createElement('span');
         arrow.className = 'sort-arrow';
@@ -303,33 +263,26 @@ document.querySelectorAll('#sellerTable th[data-sort]').forEach(th => {
     });
 });
 
-// ===== Seller Detail Modal =====
+// Modal
 const modal = new bootstrap.Modal(document.getElementById('sellerModal'));
+let currentSellerData = null, currentOrdersData = null;
+const logoB64 = {{ logo_b64 | tojson }};
+const periodLabel = {{ period.period_label | tojson }};
 
 document.querySelectorAll('.view-btn').forEach(btn => {
-    btn.addEventListener('click', e => {
-        e.stopPropagation();
-        openSellerModal(btn.dataset.store);
-    });
+    btn.addEventListener('click', e => { e.stopPropagation(); openSellerModal(btn.dataset.store); });
 });
-
 document.querySelectorAll('.seller-row').forEach(row => {
     row.addEventListener('click', () => openSellerModal(row.dataset.store));
 });
-
-// Current modal data (for invoice generation)
-let currentSellerData = null;
-let currentOrdersData = null;
-const logoB64 = {{ logo_b64 | tojson }};
-const periodLabel = {{ period.period_label | tojson }};
 
 function openSellerModal(storeName) {
     document.getElementById('modalStoreName').textContent = storeName;
     document.getElementById('modalFooter').style.display = 'none';
     document.getElementById('modalBody').innerHTML = `
         <div class="text-center py-4">
-            <div class="spinner-border text-primary"></div>
-            <p class="mt-2 text-muted">Loading...</p>
+            <div class="spinner-border text-primary" style="width:24px;height:24px;border-width:2px"></div>
+            <p class="mt-2" style="color:var(--secondary);font-size:11px">Loading...</p>
         </div>`;
     modal.show();
 
@@ -342,122 +295,87 @@ function openSellerModal(storeName) {
             currentOrdersData = orders;
 
             let html = `
-            <!-- Seller Summary Cards -->
-            <div class="row g-3 mb-4">
-                <div class="col-md-3">
-                    <div class="p-3 text-center" style="background:#F0F5FF;border-radius:12px;">
-                        <div class="text-muted small fw-semibold">Payout Amount</div>
-                        <div class="fs-4 fw-bold" style="color:#0777FF">Rs. ${s.amount.toLocaleString('en-PK', {minimumFractionDigits: 0, maximumFractionDigits: 0})}</div>
+            <div class="row g-2 mb-3">
+                <div class="col-3">
+                    <div style="background:rgba(7,119,255,0.06);border-radius:12px;padding:12px;text-align:center">
+                        <div style="font-size:9px;text-transform:uppercase;letter-spacing:0.04em;color:var(--secondary);font-weight:600">Payout</div>
+                        <div style="font-size:16px;font-weight:700;color:#0777FF">Rs. ${s.amount.toLocaleString('en-PK', {maximumFractionDigits:0})}</div>
                     </div>
                 </div>
-                <div class="col-md-3">
-                    <div class="p-3 text-center" style="background:#FEF3C7;border-radius:12px;">
-                        <div class="text-muted small fw-semibold">Total Orders</div>
-                        <div class="fs-4 fw-bold" style="color:#D97706">${s.total_orders}</div>
+                <div class="col-3">
+                    <div style="background:rgba(245,166,35,0.06);border-radius:12px;padding:12px;text-align:center">
+                        <div style="font-size:9px;text-transform:uppercase;letter-spacing:0.04em;color:var(--secondary);font-weight:600">Orders</div>
+                        <div style="font-size:16px;font-weight:700;color:#F5A623">${s.total_orders}</div>
                     </div>
                 </div>
-                <div class="col-md-3">
-                    <div class="p-3 text-center" style="background:#D1FAE5;border-radius:12px;">
-                        <div class="text-muted small fw-semibold">Delivered</div>
-                        <div class="fs-4 fw-bold" style="color:#059669">${s.total_orders}</div>
+                <div class="col-3">
+                    <div style="background:rgba(0,204,122,0.06);border-radius:12px;padding:12px;text-align:center">
+                        <div style="font-size:9px;text-transform:uppercase;letter-spacing:0.04em;color:var(--secondary);font-weight:600">Delivered</div>
+                        <div style="font-size:16px;font-weight:700;color:#00CC7A">${s.total_orders}</div>
                     </div>
                 </div>
-                <div class="col-md-3">
-                    <div class="p-3 text-center" style="background:#EDE9FE;border-radius:12px;">
-                        <div class="text-muted small fw-semibold">Avg / Order</div>
-                        <div class="fs-4 fw-bold" style="color:#7C3AED">Rs. ${s.total_orders > 0 ? Math.round(s.amount / s.total_orders).toLocaleString() : '0'}</div>
+                <div class="col-3">
+                    <div style="background:rgba(91,141,239,0.06);border-radius:12px;padding:12px;text-align:center">
+                        <div style="font-size:9px;text-transform:uppercase;letter-spacing:0.04em;color:var(--secondary);font-weight:600">Avg/Order</div>
+                        <div style="font-size:16px;font-weight:700;color:#5B8DEF">Rs. ${s.total_orders > 0 ? Math.round(s.amount / s.total_orders).toLocaleString() : '0'}</div>
                     </div>
                 </div>
             </div>
-
-            <!-- Bank Details -->
-            <div class="p-3 mb-4" style="background:#F8FAFC;border-radius:12px;border:1px solid #E2E8F0">
-                <div class="row">
-                    <div class="col-md-3">
-                        <div class="text-muted small">Business Type</div>
-                        <div class="fw-bold">${s.biz_type}</div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="text-muted small">Bank</div>
-                        <div class="fw-bold">${s.bank}</div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="text-muted small">Account Title</div>
-                        <div class="fw-bold">${s.account_title}</div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="text-muted small">IBAN</div>
-                        <div class="fw-bold small" style="word-break:break-all">${s.iban}</div>
-                    </div>
+            <div style="background:var(--chip-bg);border-radius:12px;padding:12px;margin-bottom:16px">
+                <div class="row" style="font-size:11px">
+                    <div class="col-3"><span style="color:var(--secondary)">Type</span><br><strong>${s.biz_type}</strong></div>
+                    <div class="col-3"><span style="color:var(--secondary)">Bank</span><br><strong>${s.bank}</strong></div>
+                    <div class="col-3"><span style="color:var(--secondary)">Account</span><br><strong>${s.account_title}</strong></div>
+                    <div class="col-3"><span style="color:var(--secondary)">IBAN</span><br><strong style="word-break:break-all;font-size:10px">${s.iban}</strong></div>
                 </div>
             </div>`;
 
             if (orders.length === 0) {
-                html += '<div class="alert alert-warning" style="border-radius:12px"><i class="bi bi-info-circle me-1"></i>No order details found for this seller.</div>';
+                html += '<div style="background:#FFF5EC;border-radius:12px;padding:12px;font-size:11px;color:#D4740F"><i class="bi bi-info-circle me-1"></i>No order details found.</div>';
             } else {
                 html += `
-                <h6 style="font-size:12px;text-transform:uppercase;letter-spacing:0.8px;color:#6B7280;font-weight:700;margin-bottom:12px">
-                    <i class="bi bi-list-ul me-1" style="color:#0777FF"></i> Order Details (${orders.length})
-                </h6>
-                <div class="table-responsive" style="max-height:350px;overflow-y:auto;">
-                    <table class="table table-sm order-table mb-0">
-                        <thead style="position:sticky;top:0;background:#fff;z-index:1">
-                            <tr>
-                                <th>#</th>
-                                <th>Order ID</th>
-                                <th>Product Name</th>
-                                <th>Customer</th>
-                                <th>City</th>
-                                <th class="text-center">Ordered</th>
-                                <th class="text-center">Delivered</th>
-                                <th class="text-end">Amount</th>
-                            </tr>
-                        </thead>
-                        <tbody>`;
-
+                <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--secondary);margin-bottom:8px">
+                    Order Details <span class="count-chip" style="font-size:9px;padding:2px 8px">${orders.length}</span>
+                </div>
+                <div style="max-height:300px;overflow-y:auto;">
+                    <table class="table-modern order-table" style="font-size:10px">
+                        <thead><tr>
+                            <th>#</th><th>Order ID</th><th>Product Name</th><th>Customer</th>
+                            <th>City</th><th class="text-center">Ordered</th><th class="text-center">Delivered</th>
+                            <th class="text-end">Amount</th>
+                        </tr></thead><tbody>`;
                 orders.forEach((o, i) => {
-                    html += `
-                        <tr>
-                            <td class="text-muted">${i + 1}</td>
-                            <td><code class="small" style="color:#0777FF">${o.bpid}</code></td>
-                            <td class="small">${o.product_name || o.category}</td>
-                            <td class="small">${o.customer}</td>
-                            <td class="small">${o.user_city}</td>
-                            <td class="text-center small">${o.order_date}</td>
-                            <td class="text-center small">${o.delivery_date}</td>
-                            <td class="text-end fw-semibold">${o.price.toLocaleString('en-PK', {minimumFractionDigits: 0, maximumFractionDigits: 0})}</td>
-                        </tr>`;
+                    html += `<tr>
+                        <td style="color:var(--muted)">${i+1}</td>
+                        <td><code style="color:#0777FF;font-size:9px">${o.bpid}</code></td>
+                        <td>${o.product_name || o.category}</td>
+                        <td>${o.customer}</td>
+                        <td>${o.user_city}</td>
+                        <td class="text-center">${o.order_date}</td>
+                        <td class="text-center">${o.delivery_date}</td>
+                        <td class="text-end" style="font-weight:600;color:#0777FF">${o.price.toLocaleString('en-PK', {maximumFractionDigits:0})}</td>
+                    </tr>`;
                 });
-
-                html += `
-                        </tbody>
-                    </table>
-                </div>`;
+                html += '</tbody></table></div>';
             }
-
             document.getElementById('modalBody').innerHTML = html;
             document.getElementById('modalFooter').style.display = 'flex';
         })
         .catch(() => {
-            document.getElementById('modalBody').innerHTML = '<div class="alert alert-danger" style="border-radius:12px">Error loading details.</div>';
+            document.getElementById('modalBody').innerHTML = '<div style="background:#FFF0F0;border-radius:12px;padding:12px;font-size:11px;color:#FF4F4F">Error loading details.</div>';
         });
 }
 
-// ===== Invoice Download =====
+// Invoice Download
 document.getElementById('downloadInvoiceBtn').addEventListener('click', () => {
     if (!currentSellerData || !currentOrdersData) return;
     const s = currentSellerData;
     const orders = currentOrdersData;
-
     const paymentDate = {{ period.payment_date | tojson }} || new Date().toLocaleDateString('en-GB');
-    // Parse payment date to generate payout number
     const pdParts = paymentDate.split('/');
     const payoutNum = 'BP-PO-' + pdParts[2] + '-' + pdParts[1] + pdParts[0];
-
     const netAmount = s.amount;
-
     function fmt(n) { return n.toLocaleString('en-PK', {minimumFractionDigits: 2, maximumFractionDigits: 2}); }
-
     let orderRows = '';
     orders.forEach((o, i) => {
         orderRows += `<tr>
@@ -470,182 +388,12 @@ document.getElementById('downloadInvoiceBtn').addEventListener('click', () => {
             <td class="amount">${fmt(o.price)}</td>
         </tr>`;
     });
-
-    const invoiceHtml = `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>BuyPass - Seller Payout - ${s.store}</title>
-    <style>
-        @import url("https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&display=swap");
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: "Aptos", "Public Sans", sans-serif; background: #e8e8e8; color: #333; font-size: 13px; }
-        .page {
-            width: 794px; min-height: 1123px; margin: 20px auto;
-            background: #fff; padding: 45px 50px;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
-            display: flex; flex-direction: column;
-        }
-        .header {
-            display: flex; justify-content: space-between; align-items: flex-start;
-            margin-bottom: 30px;
-        }
-        .logo { height: 60px; }
-        .company-info { text-align: right; }
-        .company-name { font-size: 18px; font-weight: 700; color: #0777FF; margin-bottom: 4px; }
-        .company-address { font-size: 11px; color: #777; line-height: 1.6; }
-        .invoice-title {
-            font-size: 24px; font-weight: 700; color: #0777FF;
-            text-transform: uppercase; letter-spacing: 1px;
-            margin-bottom: 28px;
-        }
-        .details-section {
-            display: flex; justify-content: space-between; align-items: flex-start;
-            margin-bottom: 30px;
-        }
-        .store-info { max-width: 50%; }
-        .section-label { font-size: 11px; color: #777; margin-bottom: 4px; }
-        .store-name { font-size: 15px; font-weight: 700; color: #222; margin-bottom: 2px; }
-        .store-detail { font-size: 12px; color: #555; line-height: 1.5; }
-        .meta-table { border-collapse: collapse; }
-        .meta-table td { padding: 7px 14px; font-size: 12px; }
-        .meta-table td.label {
-            background: #0777FF; color: #fff; font-weight: 600; white-space: nowrap;
-        }
-        .meta-table td.value {
-            color: #333; font-weight: 500;
-            border-bottom: 1px solid #eee; min-width: 130px;
-        }
-        .order-table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
-        .order-table thead tr { background: #0777FF; }
-        .order-table th {
-            color: #fff; font-size: 11px; font-weight: 600;
-            padding: 10px 10px; text-align: left;
-        }
-        .order-table th.center { text-align: center; }
-        .order-table th.amount { text-align: right; }
-        .order-table tbody tr { border-bottom: 1px solid #eee; }
-        .order-table td { padding: 12px 10px; font-size: 11.5px; color: #444; }
-        .order-table td.center { text-align: center; }
-        .order-table td.amount { text-align: right; font-weight: 500; }
-        .order-table td.order-id {
-            font-family: "Consolas", "Courier New", monospace;
-            font-size: 9.5px; color: #666;
-        }
-        .order-table td.product { font-weight: 500; color: #222; }
-        .order-table td.sno { text-align: center; color: #999; font-weight: 600; }
-        .bottom-section {
-            display: flex; justify-content: space-between; align-items: flex-start;
-            margin-bottom: 20px;
-        }
-        .thanks { font-size: 12px; color: #777; font-style: italic; padding-top: 4px; }
-        .totals-table { border-collapse: collapse; min-width: 240px; }
-        .totals-table td { padding: 6px 14px; font-size: 12px; }
-        .totals-table td.label { text-align: right; color: #555; font-weight: 500; }
-        .totals-table td.value { text-align: right; color: #333; font-weight: 500; min-width: 100px; }
-        .totals-table tr.total-row td {
-            font-weight: 700; font-size: 14px; color: #222; padding-top: 10px;
-        }
-        .totals-table tr.balance-row td {
-            background: #0777FF; color: #fff; font-weight: 700;
-            font-size: 14px; padding: 8px 14px;
-        }
-        .totals-table tr.balance-row td.label { text-align: right; }
-        .terms-section { margin-top: 16px; padding-top: 14px; border-top: 1px solid #eee; }
-        .terms-title { font-size: 11px; font-weight: 700; color: #222; margin-bottom: 4px; }
-        .terms-text { font-size: 10px; color: #999; line-height: 1.5; }
-        .spacer { flex: 1; }
-        .disclaimer {
-            text-align: center; color: #ccc; font-size: 9px;
-            padding-top: 20px; border-top: 1px solid #eee; margin-top: 16px;
-        }
-        @media print {
-            body { background: #fff; }
-            .page { box-shadow: none; margin: 0; padding: 40px 45px; }
-        }
-    </style>
-</head>
-<body>
-    <div class="page">
-        <div class="header">
-            <img src="${logoB64}" class="logo" alt="BuyPass">
-            <div class="company-info">
-                <div class="company-name">BuyPass Tech (Pvt) Limited</div>
-                <div class="company-address">
-                    Kickstart. 4A, 4th Floor<br>
-                    PECHS, Block 6<br>
-                    Karachi, Pakistan<br>
-                    admin@buypass.ai
-                </div>
-            </div>
-        </div>
-        <div class="invoice-title">Seller Payout</div>
-        <div class="details-section">
-            <div class="store-info">
-                <div class="section-label">Paid To</div>
-                <div class="store-name">${s.store}</div>
-                <div class="store-detail">
-                    Business Type: ${s.biz_type}<br>
-                    Payout Period: ${periodLabel}
-                </div>
-            </div>
-            <table class="meta-table">
-                <tr><td class="label">Payout #</td><td class="value">${payoutNum}</td></tr>
-                <tr><td class="label">Payment Date</td><td class="value">${paymentDate}</td></tr>
-                <tr><td class="label">Status</td><td class="value">Paid</td></tr>
-                <tr><td class="label">Period</td><td class="value">${periodLabel}</td></tr>
-            </table>
-        </div>
-        <table class="order-table">
-            <thead>
-                <tr>
-                    <th style="width:28px;" class="center">#</th>
-                    <th>Order ID</th>
-                    <th>Product Name</th>
-                    <th class="center" style="width:35px;">Qty</th>
-                    <th class="center" style="width:78px;">Order Date</th>
-                    <th class="center" style="width:78px;">Delivered</th>
-                    <th class="amount" style="width:75px;">Amount</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${orderRows}
-            </tbody>
-        </table>
-        <div class="bottom-section">
-            <div class="thanks">Thanks for selling with BuyPass.</div>
-            <table class="totals-table">
-                <tr class="total-row">
-                    <td class="label">Total</td>
-                    <td class="value">Rs. ${fmt(netAmount)}</td>
-                </tr>
-                <tr class="balance-row">
-                    <td class="label">Amount Paid</td>
-                    <td class="value">Rs. ${fmt(netAmount)}</td>
-                </tr>
-            </table>
-        </div>
-        <div class="terms-section">
-            <div class="terms-title">Terms & Conditions</div>
-            <div class="terms-text">
-                All payouts are processed for delivered orders only. Amounts are subject to applicable deductions including commission, logistics charges, and returns. This statement is for the specified payout period only.
-            </div>
-        </div>
-        <div class="spacer"></div>
-        <div class="disclaimer">
-            This is a system generated document and does not require any signature.
-        </div>
-    </div>
-</body>
-</html>`;
-
-    const invoiceWindow = window.open('', '_blank');
-    invoiceWindow.document.write(invoiceHtml);
-    invoiceWindow.document.close();
-    invoiceWindow.onload = () => {
-        setTimeout(() => invoiceWindow.print(), 500);
-    };
-})
+    const invoiceHtml = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>BuyPass - Seller Payout - ${s.store}</title><style>@import url("https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&display=swap");*{margin:0;padding:0;box-sizing:border-box}body{font-family:"Aptos","Public Sans",sans-serif;background:#e8e8e8;color:#333;font-size:13px}.page{width:794px;min-height:1123px;margin:20px auto;background:#fff;padding:45px 50px;box-shadow:0 2px 12px rgba(0,0,0,0.08);display:flex;flex-direction:column}.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:30px}.logo{height:60px}.company-info{text-align:right}.company-name{font-size:18px;font-weight:700;color:#0777FF;margin-bottom:4px}.company-address{font-size:11px;color:#777;line-height:1.6}.invoice-title{font-size:24px;font-weight:700;color:#0777FF;text-transform:uppercase;letter-spacing:1px;margin-bottom:28px}.details-section{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:30px}.store-info{max-width:50%}.section-label{font-size:11px;color:#777;margin-bottom:4px}.store-name{font-size:15px;font-weight:700;color:#222;margin-bottom:2px}.store-detail{font-size:12px;color:#555;line-height:1.5}.meta-table{border-collapse:collapse}.meta-table td{padding:7px 14px;font-size:12px}.meta-table td.label{background:#0777FF;color:#fff;font-weight:600;white-space:nowrap}.meta-table td.value{color:#333;font-weight:500;border-bottom:1px solid #eee;min-width:130px}.order-table{width:100%;border-collapse:collapse;margin-bottom:24px}.order-table thead tr{background:#0777FF}.order-table th{color:#fff;font-size:11px;font-weight:600;padding:10px 10px;text-align:left}.order-table th.center{text-align:center}.order-table th.amount{text-align:right}.order-table tbody tr{border-bottom:1px solid #eee}.order-table td{padding:12px 10px;font-size:11.5px;color:#444}.order-table td.center{text-align:center}.order-table td.amount{text-align:right;font-weight:500}.order-table td.order-id{font-family:"Consolas","Courier New",monospace;font-size:9.5px;color:#666}.order-table td.product{font-weight:500;color:#222}.order-table td.sno{text-align:center;color:#999;font-weight:600}.bottom-section{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px}.thanks{font-size:12px;color:#777;font-style:italic;padding-top:4px}.totals-table{border-collapse:collapse;min-width:240px}.totals-table td{padding:6px 14px;font-size:12px}.totals-table td.label{text-align:right;color:#555;font-weight:500}.totals-table td.value{text-align:right;color:#333;font-weight:500;min-width:100px}.totals-table tr.total-row td{font-weight:700;font-size:14px;color:#222;padding-top:10px}.totals-table tr.balance-row td{background:#0777FF;color:#fff;font-weight:700;font-size:14px;padding:8px 14px}.totals-table tr.balance-row td.label{text-align:right}.terms-section{margin-top:16px;padding-top:14px;border-top:1px solid #eee}.terms-title{font-size:11px;font-weight:700;color:#222;margin-bottom:4px}.terms-text{font-size:10px;color:#999;line-height:1.5}.spacer{flex:1}.disclaimer{text-align:center;color:#ccc;font-size:9px;padding-top:20px;border-top:1px solid #eee;margin-top:16px}@media print{body{background:#fff}.page{box-shadow:none;margin:0;padding:40px 45px}}</style></head><body><div class="page"><div class="header"><img src="${logoB64}" class="logo" alt="BuyPass"><div class="company-info"><div class="company-name">BuyPass Tech (Pvt) Limited</div><div class="company-address">Kickstart. 4A, 4th Floor<br>PECHS, Block 6<br>Karachi, Pakistan<br>admin@buypass.ai</div></div></div><div class="invoice-title">Seller Payout</div><div class="details-section"><div class="store-info"><div class="section-label">Paid To</div><div class="store-name">${s.store}</div><div class="store-detail">Business Type: ${s.biz_type}<br>Payout Period: ${periodLabel}</div></div><table class="meta-table"><tr><td class="label">Payout #</td><td class="value">${payoutNum}</td></tr><tr><td class="label">Payment Date</td><td class="value">${paymentDate}</td></tr><tr><td class="label">Status</td><td class="value">Paid</td></tr><tr><td class="label">Period</td><td class="value">${periodLabel}</td></tr></table></div><table class="order-table"><thead><tr><th style="width:28px" class="center">#</th><th>Order ID</th><th>Product Name</th><th class="center" style="width:35px">Qty</th><th class="center" style="width:78px">Order Date</th><th class="center" style="width:78px">Delivered</th><th class="amount" style="width:75px">Amount</th></tr></thead><tbody>${orderRows}</tbody></table><div class="bottom-section"><div class="thanks">Thanks for selling with BuyPass.</div><table class="totals-table"><tr class="total-row"><td class="label">Total</td><td class="value">Rs. ${fmt(netAmount)}</td></tr><tr class="balance-row"><td class="label">Amount Paid</td><td class="value">Rs. ${fmt(netAmount)}</td></tr></table></div><div class="terms-section"><div class="terms-title">Terms & Conditions</div><div class="terms-text">All payouts are processed for delivered orders only. Amounts are subject to applicable deductions including commission, logistics charges, and returns. This statement is for the specified payout period only.</div></div><div class="spacer"></div><div class="disclaimer">This is a system generated document and does not require any signature.</div></div></body></html>`;
+    const w = window.open('', '_blank');
+    w.document.write(invoiceHtml);
+    w.document.close();
+    w.onload = () => { setTimeout(() => w.print(), 500); };
+});
 
 // Flash auto-dismiss
 setTimeout(() => {
