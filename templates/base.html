@@ -237,6 +237,15 @@
         </a>
         <div class="nav-right">
             {% block nav_actions %}{% endblock %}
+            {% if user %}
+            <div class="d-flex align-items-center gap-2" style="margin-left:8px;">
+                {% if user.picture %}
+                <img src="{{ user.picture }}" alt="" style="width:30px;height:30px;border-radius:50%;">
+                {% endif %}
+                <span style="font-size:13px;color:#374151;font-weight:500;">{{ user.name }}</span>
+                <a href="/logout" class="nav-btn" style="padding:4px 10px;font-size:12px;">Logout</a>
+            </div>
+            {% endif %}
         </div>
     </nav>
 
