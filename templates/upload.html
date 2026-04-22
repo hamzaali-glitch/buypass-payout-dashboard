@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% block title %}Upload Payout File - BuyPass{% endblock %}
+
+{% block extra_css %}
+.upload-zone {
+    border: 3px dashed #ccc;
+    border-radius: 16px;
+    padding: 60px 40px;
+    text-align: center;
+    transition: all 0.3s;
+    cursor: pointer;
+    background: #fff;
+}
+.upload-zone:hover, .upload-zone.dragover {
+    border-color: var(--bp-blue);
+    background: var(--bp-light);
+}
+.upload-icon { font-size: 64px; color: var(--bp-blue); }
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-4">
+    <div class="col-lg-6 col-md-8">
+        <div class="card p-4">
+            <h4 class="mb-1"><i class="bi bi-cloud-arrow-up text-primary me-2"></i>Upload Payout File</h4>
+            <p class="text-muted small">Upload the weekly seller payout Excel file. Previous uploads are kept as history.</p>
+
+            <form method="POST" enctype="multipart/form-data" id="uploadForm">
+                <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+                    <div class="upload-icon mb-3"><i class="bi bi-file-earmark-spreadsheet"></i></div>
+                    <h5 id="dropText">Drop your Excel file here or click to browse</h5>
+                    <p class="text-muted small mb-0">Supports .xlsx files</p>
+                </div>
+                <input type="file" name="file" id="fileInput" accept=".xlsx,.xls" class="d-none">
+
+                <div class="mt-3">
+                    <label class="form-label small text-muted">Period Label (auto-detected from filename, or type your own)</label>
+                    <input type="text" name="period_label" id="periodLabel" class="form-control"
+                           placeholder="e.g. 6-12 April, 13-19 April">
+                </div>
+
+                <button type="submit" class="btn btn-bp w-100 mt-3 py-2" id="uploadBtn" disabled>
+                    <i class="bi bi-upload me-1"></i>Upload & Process
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% if periods %}
+<div class="row justify-content-center mt-4">
+    <div class="col-lg-8">
+        <div class="card p-4">
+            <h5 class="mb-3"><i class="bi bi-clock-history text-primary me-2"></i>Upload History</h5>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Period</th>
+                            <th>File</th>
+                            <th class="text-center">Sellers</th>
+                            <th class="text-center">Orders</th>
+                            <th class="text-end">Total Payout</th>
+                            <th>Uploaded</th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in periods %}
+                        <tr>
+                            <td class="fw-semibold">{{ p.period_label }}</td>
+                            <td class="small text-muted">{{ p.file_name }}</td>
+                            <td class="text-center">{{ p.total_sellers }}</td>
+                            <td class="text-center">{{ p.total_orders }}</td>
+                            <td class="text-end fw-semibold" style="color:#0777FF">Rs. {{ "{:,.0f}".format(p.total_payout) }}</td>
+                            <td class="small text-muted">{{ p.upload_time }}</td>
+                            <td class="text-center">
+                                <a href="/dashboard/{{ p.id }}" class="btn btn-sm btn-outline-primary me-1" title="View Dashboard">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <form method="POST" action="/delete-period/{{ p.id }}" class="d-inline"
+                                      onsubmit="return confirm('Delete period {{ p.period_label }}? This cannot be undone.')">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const uploadBtn = document.getElementById('uploadBtn');
+const dropText = document.getElementById('dropText');
+const periodLabel = document.getElementById('periodLabel');
+
+fileInput.addEventListener('change', function() {
+    if (this.files.length) {
+        const fname = this.files[0].name;
+        dropText.textContent = fname;
+        dropZone.style.borderColor = '#0777FF';
+        dropZone.style.background = '#E8F1FF';
+        uploadBtn.disabled = false;
+
+        // Auto-extract period label from filename
+        let label = fname.replace(/\.xlsx?$/i, '').replace(/seller[\s_]*payout[\s_]*/i, '').trim();
+        if (label && !periodLabel.value) {
+            periodLabel.value = label;
+        }
+    }
+});
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    if (e.dataTransfer.files.length) {
+        fileInput.files = e.dataTransfer.files;
+        fileInput.dispatchEvent(new Event('change'));
+    }
+});
+
+document.getElementById('uploadForm').addEventListener('submit', function() {
+    uploadBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Processing...';
+    uploadBtn.disabled = true;
+});
+
+setTimeout(() => {
+    document.querySelectorAll('.flash-msg').forEach(el => { new bootstrap.Alert(el).close(); });
+}, 4000);
+</script>
+{% endblock %}
