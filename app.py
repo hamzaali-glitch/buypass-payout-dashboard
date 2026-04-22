@@ -82,8 +82,8 @@ else:
 
 
 # ===== Google SSO Setup =====
-GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
-GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET')
+GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID', '').strip() or None
+GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET', '').strip() or None
 ALLOWED_DOMAIN = 'buypass.ai'
 
 oauth = OAuth(app)
@@ -238,6 +238,16 @@ def dashboard(period_id):
 def seller_orders_api(period_id, store_name):
     orders, seller = get_seller_orders(period_id, store_name)
     return jsonify({'orders': orders, 'seller': seller})
+
+
+@app.route('/health')
+def health():
+    return jsonify({
+        'auth_enabled': GOOGLE_CLIENT_ID is not None,
+        'db_type': 'postgresql' if DATABASE_URL else 'sqlite',
+        'client_id_set': bool(GOOGLE_CLIENT_ID),
+        'client_id_prefix': GOOGLE_CLIENT_ID[:20] + '...' if GOOGLE_CLIENT_ID else None,
+    })
 
 
 if __name__ == '__main__':
