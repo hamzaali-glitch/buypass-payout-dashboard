@@ -3,6 +3,7 @@
 
 {% block header_controls %}
 <select id="periodSelector" class="period-select">
+    <option value="all" {% if current_period_id == 'all' %}selected{% endif %}>All Periods</option>
     {% for p in periods %}
     <option value="{{ p.id }}" {% if p.id == current_period_id %}selected{% endif %}>
         {{ p.period_label }}
@@ -118,6 +119,7 @@
                     <th data-sort="index" style="width:40px">#</th>
                     <th data-sort="store">Store Name</th>
                     <th data-sort="biz_type">Type</th>
+                    {% if is_all_periods %}<th data-sort="periods_count" class="text-center">Periods</th>{% endif %}
                     <th data-sort="total_orders" class="text-center">Orders</th>
                     <th data-sort="amount" class="text-end">Payout</th>
                     <th class="text-center" style="width:50px"></th>
@@ -137,6 +139,7 @@
                         }.get(s.biz_type, 'badge-default') %}
                         <span class="badge-biz {{ biz_class }}">{{ s.biz_type }}</span>
                     </td>
+                    {% if is_all_periods %}<td class="text-center" style="font-weight:600">{{ s.periods_count }}</td>{% endif %}
                     <td class="text-center" style="font-weight:600">{{ s.total_orders }}</td>
                     <td class="text-end amount-col">Rs. {{ "{:,.0f}".format(s.amount) }}</td>
                     <td class="text-center">
@@ -181,7 +184,8 @@
 
 {% block scripts %}
 <script>
-const currentPeriodId = {{ current_period_id }};
+const currentPeriodId = {{ current_period_id | tojson }};
+const isAllPeriods = {{ is_all_periods | tojson }};
 const sellers = {{ sellers | tojson }};
 const tbody = document.getElementById('sellerBody');
 const searchInput = document.getElementById('searchInput');
@@ -191,7 +195,11 @@ const resultCount = document.getElementById('resultCount');
 
 // Period selector
 document.getElementById('periodSelector').addEventListener('change', function() {
-    window.location.href = '/dashboard/' + this.value;
+    if (this.value === 'all') {
+        window.location.href = '/dashboard/all';
+    } else {
+        window.location.href = '/dashboard/' + this.value;
+    }
 });
 
 // Populate biz type filter
@@ -265,7 +273,7 @@ document.querySelectorAll('.table-modern th[data-sort]').forEach(th => {
 
 // Modal
 const modal = new bootstrap.Modal(document.getElementById('sellerModal'));
-let currentSellerData = null, currentOrdersData = null;
+let currentSellerData = null, currentOrdersData = null, currentIsAllPeriods = false;
 const logoB64 = {{ logo_b64 | tojson }};
 const periodLabel = {{ period.period_label | tojson }};
 
@@ -286,19 +294,24 @@ function openSellerModal(storeName) {
         </div>`;
     modal.show();
 
-    fetch('/api/seller/' + currentPeriodId + '/' + encodeURIComponent(storeName))
+    const apiUrl = isAllPeriods
+        ? '/api/seller/all/' + encodeURIComponent(storeName)
+        : '/api/seller/' + currentPeriodId + '/' + encodeURIComponent(storeName);
+
+    fetch(apiUrl)
         .then(r => r.json())
         .then(data => {
             const s = data.seller;
             const orders = data.orders;
             currentSellerData = s;
             currentOrdersData = orders;
+            currentIsAllPeriods = data.is_all_periods || false;
 
             let html = `
             <div class="row g-2 mb-3">
                 <div class="col-3">
                     <div style="background:rgba(7,119,255,0.06);border-radius:12px;padding:12px;text-align:center">
-                        <div style="font-size:9px;text-transform:uppercase;letter-spacing:0.04em;color:var(--secondary);font-weight:600">Payout</div>
+                        <div style="font-size:9px;text-transform:uppercase;letter-spacing:0.04em;color:var(--secondary);font-weight:600">Total Payout</div>
                         <div style="font-size:16px;font-weight:700;color:#0777FF">Rs. ${s.amount.toLocaleString('en-PK', {maximumFractionDigits:0})}</div>
                     </div>
                 </div>
@@ -332,6 +345,47 @@ function openSellerModal(storeName) {
 
             if (orders.length === 0) {
                 html += '<div style="background:#FFF5EC;border-radius:12px;padding:12px;font-size:11px;color:#D4740F"><i class="bi bi-info-circle me-1"></i>No order details found.</div>';
+            } else if (currentIsAllPeriods) {
+                // Group orders by period for consolidated ledger
+                const grouped = {};
+                orders.forEach(o => {
+                    const pl = o.period_label || 'Unknown';
+                    if (!grouped[pl]) grouped[pl] = [];
+                    grouped[pl].push(o);
+                });
+                html += `
+                <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--secondary);margin-bottom:8px">
+                    Consolidated Ledger <span class="count-chip" style="font-size:9px;padding:2px 8px">${orders.length} orders across ${Object.keys(grouped).length} periods</span>
+                </div>
+                <div style="max-height:400px;overflow-y:auto;">`;
+                for (const [periodLabel, periodOrders] of Object.entries(grouped)) {
+                    const periodTotal = periodOrders.reduce((sum, o) => sum + o.price, 0);
+                    html += `
+                    <div style="background:#F0F4FA;border-radius:10px;padding:8px 12px;margin-bottom:4px;display:flex;justify-content:space-between;align-items:center">
+                        <span style="font-size:11px;font-weight:700;color:var(--primary)"><i class="bi bi-calendar3 me-1" style="color:var(--bp-blue)"></i>${periodLabel}</span>
+                        <span style="font-size:10px;font-weight:600;color:var(--bp-blue)">${periodOrders.length} orders &middot; Rs. ${periodTotal.toLocaleString('en-PK', {maximumFractionDigits:0})}</span>
+                    </div>
+                    <table class="table-modern order-table" style="font-size:10px;margin-bottom:12px">
+                        <thead><tr>
+                            <th>#</th><th>Order ID</th><th>Product Name</th><th>Customer</th>
+                            <th>City</th><th class="text-center">Ordered</th><th class="text-center">Delivered</th>
+                            <th class="text-end">Amount</th>
+                        </tr></thead><tbody>`;
+                    periodOrders.forEach((o, i) => {
+                        html += `<tr>
+                            <td style="color:var(--muted)">${i+1}</td>
+                            <td><code style="color:#0777FF;font-size:9px">${o.bpid}</code></td>
+                            <td>${o.product_name || o.category}</td>
+                            <td>${o.customer}</td>
+                            <td>${o.user_city}</td>
+                            <td class="text-center">${o.order_date}</td>
+                            <td class="text-center">${o.delivery_date}</td>
+                            <td class="text-end" style="font-weight:600;color:#0777FF">${o.price.toLocaleString('en-PK', {maximumFractionDigits:0})}</td>
+                        </tr>`;
+                    });
+                    html += '</tbody></table>';
+                }
+                html += '</div>';
             } else {
                 html += `
                 <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--secondary);margin-bottom:8px">
@@ -371,24 +425,70 @@ document.getElementById('downloadInvoiceBtn').addEventListener('click', () => {
     if (!currentSellerData || !currentOrdersData) return;
     const s = currentSellerData;
     const orders = currentOrdersData;
-    const paymentDate = {{ period.payment_date | tojson }} || new Date().toLocaleDateString('en-GB');
-    const pdParts = paymentDate.split('/');
-    const payoutNum = 'BP-PO-' + pdParts[2] + '-' + pdParts[1] + pdParts[0];
     const netAmount = s.amount;
     function fmt(n) { return n.toLocaleString('en-PK', {minimumFractionDigits: 2, maximumFractionDigits: 2}); }
-    let orderRows = '';
-    orders.forEach((o, i) => {
-        orderRows += `<tr>
-            <td class="sno">${i+1}</td>
-            <td class="order-id">${o.bpid}</td>
-            <td class="product">${o.product_name || o.category}</td>
-            <td class="center">1</td>
-            <td class="center">${o.order_date}</td>
-            <td class="center">${o.delivery_date}</td>
-            <td class="amount">${fmt(o.price)}</td>
-        </tr>`;
-    });
-    const invoiceHtml = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>BuyPass - Seller Payout - ${s.store}</title><style>@import url("https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&display=swap");*{margin:0;padding:0;box-sizing:border-box}body{font-family:"Aptos","Public Sans",sans-serif;background:#e8e8e8;color:#333;font-size:13px}.page{width:794px;min-height:1123px;margin:20px auto;background:#fff;padding:45px 50px;box-shadow:0 2px 12px rgba(0,0,0,0.08);display:flex;flex-direction:column}.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:30px}.logo{height:60px}.company-info{text-align:right}.company-name{font-size:18px;font-weight:700;color:#0777FF;margin-bottom:4px}.company-address{font-size:11px;color:#777;line-height:1.6}.invoice-title{font-size:24px;font-weight:700;color:#0777FF;text-transform:uppercase;letter-spacing:1px;margin-bottom:28px}.details-section{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:30px}.store-info{max-width:50%}.section-label{font-size:11px;color:#777;margin-bottom:4px}.store-name{font-size:15px;font-weight:700;color:#222;margin-bottom:2px}.store-detail{font-size:12px;color:#555;line-height:1.5}.meta-table{border-collapse:collapse}.meta-table td{padding:7px 14px;font-size:12px}.meta-table td.label{background:#0777FF;color:#fff;font-weight:600;white-space:nowrap}.meta-table td.value{color:#333;font-weight:500;border-bottom:1px solid #eee;min-width:130px}.order-table{width:100%;border-collapse:collapse;margin-bottom:24px}.order-table thead tr{background:#0777FF}.order-table th{color:#fff;font-size:11px;font-weight:600;padding:10px 10px;text-align:left}.order-table th.center{text-align:center}.order-table th.amount{text-align:right}.order-table tbody tr{border-bottom:1px solid #eee}.order-table td{padding:12px 10px;font-size:11.5px;color:#444}.order-table td.center{text-align:center}.order-table td.amount{text-align:right;font-weight:500}.order-table td.order-id{font-family:"Consolas","Courier New",monospace;font-size:9.5px;color:#666}.order-table td.product{font-weight:500;color:#222}.order-table td.sno{text-align:center;color:#999;font-weight:600}.bottom-section{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px}.thanks{font-size:12px;color:#777;font-style:italic;padding-top:4px}.totals-table{border-collapse:collapse;min-width:240px}.totals-table td{padding:6px 14px;font-size:12px}.totals-table td.label{text-align:right;color:#555;font-weight:500}.totals-table td.value{text-align:right;color:#333;font-weight:500;min-width:100px}.totals-table tr.total-row td{font-weight:700;font-size:14px;color:#222;padding-top:10px}.totals-table tr.balance-row td{background:#0777FF;color:#fff;font-weight:700;font-size:14px;padding:8px 14px}.totals-table tr.balance-row td.label{text-align:right}.terms-section{margin-top:16px;padding-top:14px;border-top:1px solid #eee}.terms-title{font-size:11px;font-weight:700;color:#222;margin-bottom:4px}.terms-text{font-size:10px;color:#999;line-height:1.5}.spacer{flex:1}.disclaimer{text-align:center;color:#ccc;font-size:9px;padding-top:20px;border-top:1px solid #eee;margin-top:16px}@media print{body{background:#fff}.page{box-shadow:none;margin:0;padding:40px 45px}}</style></head><body><div class="page"><div class="header"><img src="${logoB64}" class="logo" alt="BuyPass"><div class="company-info"><div class="company-name">BuyPass Tech (Pvt) Limited</div><div class="company-address">Kickstart. 4A, 4th Floor<br>PECHS, Block 6<br>Karachi, Pakistan<br>admin@buypass.ai</div></div></div><div class="invoice-title">Seller Payout</div><div class="details-section"><div class="store-info"><div class="section-label">Paid To</div><div class="store-name">${s.store}</div><div class="store-detail">Business Type: ${s.biz_type}<br>Payout Period: ${periodLabel}</div></div><table class="meta-table"><tr><td class="label">Payout #</td><td class="value">${payoutNum}</td></tr><tr><td class="label">Payment Date</td><td class="value">${paymentDate}</td></tr><tr><td class="label">Status</td><td class="value">Paid</td></tr><tr><td class="label">Period</td><td class="value">${periodLabel}</td></tr></table></div><table class="order-table"><thead><tr><th style="width:28px" class="center">#</th><th>Order ID</th><th>Product Name</th><th class="center" style="width:35px">Qty</th><th class="center" style="width:78px">Order Date</th><th class="center" style="width:78px">Delivered</th><th class="amount" style="width:75px">Amount</th></tr></thead><tbody>${orderRows}</tbody></table><div class="bottom-section"><div class="thanks">Thanks for selling with BuyPass.</div><table class="totals-table"><tr class="total-row"><td class="label">Total</td><td class="value">Rs. ${fmt(netAmount)}</td></tr><tr class="balance-row"><td class="label">Amount Paid</td><td class="value">Rs. ${fmt(netAmount)}</td></tr></table></div><div class="terms-section"><div class="terms-title">Terms & Conditions</div><div class="terms-text">All payouts are processed for delivered orders only. Amounts are subject to applicable deductions including commission, logistics charges, and returns. This statement is for the specified payout period only.</div></div><div class="spacer"></div><div class="disclaimer">This is a system generated document and does not require any signature.</div></div></body></html>`;
+
+    // Period-specific vs consolidated
+    const isConsolidated = currentIsAllPeriods;
+    const paymentDate = isConsolidated ? null : ({{ period.payment_date | tojson }} || new Date().toLocaleDateString('en-GB'));
+    const invoiceTitle = isConsolidated ? 'Consolidated Seller Ledger' : 'Seller Payout';
+    const periodText = isConsolidated ? 'All Periods (Consolidated)' : periodLabel;
+    let payoutNum, metaRows;
+
+    if (isConsolidated) {
+        payoutNum = 'BP-CL-' + new Date().getFullYear();
+        metaRows = `<tr><td class="label">Ref #</td><td class="value">${payoutNum}</td></tr><tr><td class="label">Generated</td><td class="value">${new Date().toLocaleDateString('en-GB')}</td></tr><tr><td class="label">Status</td><td class="value">Paid</td></tr><tr><td class="label">Scope</td><td class="value">All Periods</td></tr>`;
+    } else {
+        const pdParts = paymentDate.split('/');
+        payoutNum = 'BP-PO-' + pdParts[2] + '-' + pdParts[1] + pdParts[0];
+        metaRows = `<tr><td class="label">Payout #</td><td class="value">${payoutNum}</td></tr><tr><td class="label">Payment Date</td><td class="value">${paymentDate}</td></tr><tr><td class="label">Status</td><td class="value">Paid</td></tr><tr><td class="label">Period</td><td class="value">${periodLabel}</td></tr>`;
+    }
+
+    let orderContent = '';
+    if (isConsolidated) {
+        // Group orders by period
+        const grouped = {};
+        orders.forEach(o => {
+            const pl = o.period_label || 'Unknown';
+            if (!grouped[pl]) grouped[pl] = [];
+            grouped[pl].push(o);
+        });
+        let globalIdx = 0;
+        for (const [pl, periodOrders] of Object.entries(grouped)) {
+            const periodTotal = periodOrders.reduce((sum, o) => sum + o.price, 0);
+            orderContent += `<tr><td colspan="7" style="background:#E5F1FF;font-weight:700;font-size:11px;color:#0777FF;padding:8px 10px;border:none">${pl} &mdash; ${periodOrders.length} orders &middot; Rs. ${fmt(periodTotal)}</td></tr>`;
+            periodOrders.forEach(o => {
+                globalIdx++;
+                orderContent += `<tr>
+                    <td class="sno">${globalIdx}</td>
+                    <td class="order-id">${o.bpid}</td>
+                    <td class="product">${o.product_name || o.category}</td>
+                    <td class="center">1</td>
+                    <td class="center">${o.order_date}</td>
+                    <td class="center">${o.delivery_date}</td>
+                    <td class="amount">${fmt(o.price)}</td>
+                </tr>`;
+            });
+        }
+    } else {
+        orders.forEach((o, i) => {
+            orderContent += `<tr>
+                <td class="sno">${i+1}</td>
+                <td class="order-id">${o.bpid}</td>
+                <td class="product">${o.product_name || o.category}</td>
+                <td class="center">1</td>
+                <td class="center">${o.order_date}</td>
+                <td class="center">${o.delivery_date}</td>
+                <td class="amount">${fmt(o.price)}</td>
+            </tr>`;
+        });
+    }
+
+    const termsText = isConsolidated
+        ? 'This is a consolidated ledger covering all payout periods to date. Individual payout invoices with bank transfer dates are available under each specific period.'
+        : 'All payouts are processed for delivered orders only. Amounts are subject to applicable deductions including commission, logistics charges, and returns. This statement is for the specified payout period only.';
+
+    const invoiceHtml = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>BuyPass - ${invoiceTitle} - ${s.store}</title><style>@import url("https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&display=swap");*{margin:0;padding:0;box-sizing:border-box}body{font-family:"Aptos","Public Sans",sans-serif;background:#e8e8e8;color:#333;font-size:13px}.page{width:794px;min-height:1123px;margin:20px auto;background:#fff;padding:45px 50px;box-shadow:0 2px 12px rgba(0,0,0,0.08);display:flex;flex-direction:column}.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:30px}.logo{height:60px}.company-info{text-align:right}.company-name{font-size:18px;font-weight:700;color:#0777FF;margin-bottom:4px}.company-address{font-size:11px;color:#777;line-height:1.6}.invoice-title{font-size:24px;font-weight:700;color:#0777FF;text-transform:uppercase;letter-spacing:1px;margin-bottom:28px}.details-section{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:30px}.store-info{max-width:50%}.section-label{font-size:11px;color:#777;margin-bottom:4px}.store-name{font-size:15px;font-weight:700;color:#222;margin-bottom:2px}.store-detail{font-size:12px;color:#555;line-height:1.5}.meta-table{border-collapse:collapse}.meta-table td{padding:7px 14px;font-size:12px}.meta-table td.label{background:#0777FF;color:#fff;font-weight:600;white-space:nowrap}.meta-table td.value{color:#333;font-weight:500;border-bottom:1px solid #eee;min-width:130px}.order-table{width:100%;border-collapse:collapse;margin-bottom:24px}.order-table thead tr{background:#0777FF}.order-table th{color:#fff;font-size:11px;font-weight:600;padding:10px 10px;text-align:left}.order-table th.center{text-align:center}.order-table th.amount{text-align:right}.order-table tbody tr{border-bottom:1px solid #eee}.order-table td{padding:12px 10px;font-size:11.5px;color:#444}.order-table td.center{text-align:center}.order-table td.amount{text-align:right;font-weight:500}.order-table td.order-id{font-family:"Consolas","Courier New",monospace;font-size:9.5px;color:#666}.order-table td.product{font-weight:500;color:#222}.order-table td.sno{text-align:center;color:#999;font-weight:600}.bottom-section{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px}.thanks{font-size:12px;color:#777;font-style:italic;padding-top:4px}.totals-table{border-collapse:collapse;min-width:240px}.totals-table td{padding:6px 14px;font-size:12px}.totals-table td.label{text-align:right;color:#555;font-weight:500}.totals-table td.value{text-align:right;color:#333;font-weight:500;min-width:100px}.totals-table tr.total-row td{font-weight:700;font-size:14px;color:#222;padding-top:10px}.totals-table tr.balance-row td{background:#0777FF;color:#fff;font-weight:700;font-size:14px;padding:8px 14px}.totals-table tr.balance-row td.label{text-align:right}.terms-section{margin-top:16px;padding-top:14px;border-top:1px solid #eee}.terms-title{font-size:11px;font-weight:700;color:#222;margin-bottom:4px}.terms-text{font-size:10px;color:#999;line-height:1.5}.spacer{flex:1}.disclaimer{text-align:center;color:#ccc;font-size:9px;padding-top:20px;border-top:1px solid #eee;margin-top:16px}@media print{body{background:#fff}.page{box-shadow:none;margin:0;padding:40px 45px}}</style></head><body><div class="page"><div class="header"><img src="${logoB64}" class="logo" alt="BuyPass"><div class="company-info"><div class="company-name">BuyPass Tech (Pvt) Limited</div><div class="company-address">Kickstart. 4A, 4th Floor<br>PECHS, Block 6<br>Karachi, Pakistan<br>admin@buypass.ai</div></div></div><div class="invoice-title">${invoiceTitle}</div><div class="details-section"><div class="store-info"><div class="section-label">Paid To</div><div class="store-name">${s.store}</div><div class="store-detail">Business Type: ${s.biz_type}<br>Scope: ${periodText}</div></div><table class="meta-table">${metaRows}</table></div><table class="order-table"><thead><tr><th style="width:28px" class="center">#</th><th>Order ID</th><th>Product Name</th><th class="center" style="width:35px">Qty</th><th class="center" style="width:78px">Order Date</th><th class="center" style="width:78px">Delivered</th><th class="amount" style="width:75px">Amount</th></tr></thead><tbody>${orderContent}</tbody></table><div class="bottom-section"><div class="thanks">Thanks for selling with BuyPass.</div><table class="totals-table"><tr class="total-row"><td class="label">Total</td><td class="value">Rs. ${fmt(netAmount)}</td></tr><tr class="balance-row"><td class="label">Amount Paid</td><td class="value">Rs. ${fmt(netAmount)}</td></tr></table></div><div class="terms-section"><div class="terms-title">Terms & Conditions</div><div class="terms-text">${termsText}</div></div><div class="spacer"></div><div class="disclaimer">This is a system generated document and does not require any signature.</div></div></body></html>`;
     const w = window.open('', '_blank');
     w.document.write(invoiceHtml);
     w.document.close();

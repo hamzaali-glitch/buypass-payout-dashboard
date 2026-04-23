@@ -202,6 +202,66 @@ def get_seller_orders(period_id, store_name):
     return orders, seller
 
 
+def get_all_periods_data():
+    """Aggregate sellers across all periods for consolidated ledger view."""
+    ph = '%s' if DATABASE_URL else '?'
+    # Aggregate sellers: group by store, sum amounts and orders
+    sellers = db_fetchall('''
+        SELECT s.store,
+               SUM(s.amount) as amount,
+               SUM(s.total_orders) as total_orders,
+               MAX(s.biz_type) as biz_type,
+               MAX(s.iban) as iban,
+               MAX(s.bank) as bank,
+               MAX(s.account_title) as account_title,
+               COUNT(DISTINCT s.period_id) as periods_count
+        FROM sellers s
+        GROUP BY s.store
+        ORDER BY SUM(s.amount) DESC
+    ''')
+    total_sellers = len(sellers)
+    total_orders = sum(s['total_orders'] for s in sellers)
+    total_payout = sum(s['amount'] for s in sellers)
+    totals = {
+        'total_sellers': total_sellers,
+        'total_orders': total_orders,
+        'total_payout': total_payout,
+        'avg_order': total_payout / total_orders if total_orders > 0 else 0,
+    }
+    period = {
+        'id': 'all',
+        'period_label': 'All Periods',
+        'payment_date': None,
+    }
+    return period, sellers, totals
+
+
+def get_all_periods_seller_orders(store_name):
+    """Get all orders for a seller across all periods, with period labels."""
+    ph = '%s' if DATABASE_URL else '?'
+    orders = db_fetchall(f'''
+        SELECT o.*, p.period_label
+        FROM orders o
+        JOIN periods p ON o.period_id = p.id
+        WHERE o.store = {ph}
+        ORDER BY p.sort_date DESC, o.id
+    ''', (store_name,))
+    # Aggregate seller info across all periods
+    seller = db_fetchone(f'''
+        SELECT store,
+               SUM(amount) as amount,
+               SUM(total_orders) as total_orders,
+               MAX(biz_type) as biz_type,
+               MAX(iban) as iban,
+               MAX(bank) as bank,
+               MAX(account_title) as account_title
+        FROM sellers
+        WHERE store = {ph}
+        GROUP BY store
+    ''', (store_name,))
+    return orders, seller
+
+
 @app.route('/')
 @login_required
 def index():
@@ -209,6 +269,28 @@ def index():
     if periods:
         return redirect(url_for('dashboard', period_id=periods[0]['id']))
     return render_template('no_data.html', user=session.get('user'))
+
+
+@app.route('/dashboard/all')
+@login_required
+def dashboard_all():
+    periods = get_all_periods()
+    period, sellers, totals = get_all_periods_data()
+
+    logo_path = os.path.join(os.path.dirname(__file__), 'static', 'logo.png')
+    with open(logo_path, 'rb') as lf:
+        logo_b64 = 'data:image/png;base64,' + base64.b64encode(lf.read()).decode()
+
+    return render_template('dashboard.html',
+                           sellers=sellers,
+                           totals=totals,
+                           period=period,
+                           periods=periods,
+                           current_period_id='all',
+                           comparison=None,
+                           logo_b64=logo_b64,
+                           is_all_periods=True,
+                           user=session.get('user'))
 
 
 @app.route('/dashboard/<int:period_id>')
@@ -232,14 +314,22 @@ def dashboard(period_id):
                            current_period_id=period_id,
                            comparison=comparison,
                            logo_b64=logo_b64,
+                           is_all_periods=False,
                            user=session.get('user'))
+
+
+@app.route('/api/seller/all/<store_name>')
+@login_required
+def seller_orders_all_api(store_name):
+    orders, seller = get_all_periods_seller_orders(store_name)
+    return jsonify({'orders': orders, 'seller': seller, 'is_all_periods': True})
 
 
 @app.route('/api/seller/<int:period_id>/<store_name>')
 @login_required
 def seller_orders_api(period_id, store_name):
     orders, seller = get_seller_orders(period_id, store_name)
-    return jsonify({'orders': orders, 'seller': seller})
+    return jsonify({'orders': orders, 'seller': seller, 'is_all_periods': False})
 
 
 @app.route('/health')
