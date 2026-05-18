@@ -54,6 +54,12 @@ def init_db():
         print("  Added product_name column to orders table")
     except Exception:
         pass  # column already exists
+    # Add payment_date column to sellers if missing (for per-seller payment dates)
+    try:
+        db.execute('ALTER TABLE sellers ADD COLUMN payment_date TEXT')
+        print("  Added payment_date column to sellers table")
+    except Exception:
+        pass  # column already exists
     db.execute('CREATE INDEX IF NOT EXISTS idx_sellers_period ON sellers(period_id)')
     db.execute('CREATE INDEX IF NOT EXISTS idx_orders_period_store ON orders(period_id, store)')
     db.commit()
@@ -161,7 +167,7 @@ def safe_float(val):
         return 0
 
 
-def load_payout(excel_path, period_label, payment_date=None, sort_date=None):
+def load_payout(excel_path, period_label, payment_date=None, sort_date=None, hold_sellers=None):
     print(f"Loading: {excel_path}")
     print(f"Period:  {period_label}")
 
@@ -383,9 +389,11 @@ def load_payout(excel_path, period_label, payment_date=None, sort_date=None):
                 (period_label, upload_time, len(sellers), total_orders, total_payout, payment_date, sort_date))
     pid = cur.lastrowid
 
+    hold_set = set(hold_sellers or [])
     for s in sellers:
-        cur.execute('INSERT INTO sellers (period_id, store, amount, total_orders, biz_type, iban, bank, account_title) VALUES (?,?,?,?,?,?,?,?)',
-                    (pid, s['store'], s['amount'], s['total_orders'], s['biz_type'], s['iban'], s['bank'], s['account_title']))
+        seller_pay_date = 'Unpaid' if s['store'] in hold_set else None
+        cur.execute('INSERT INTO sellers (period_id, store, amount, total_orders, biz_type, iban, bank, account_title, payment_date) VALUES (?,?,?,?,?,?,?,?,?)',
+                    (pid, s['store'], s['amount'], s['total_orders'], s['biz_type'], s['iban'], s['bank'], s['account_title'], seller_pay_date))
 
     for store, orders in orders_by_store.items():
         for o in orders:

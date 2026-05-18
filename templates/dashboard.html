@@ -430,7 +430,11 @@ document.getElementById('downloadInvoiceBtn').addEventListener('click', () => {
 
     // Period-specific vs consolidated
     const isConsolidated = currentIsAllPeriods;
-    const paymentDate = isConsolidated ? null : ({{ period.payment_date | tojson }} || new Date().toLocaleDateString('en-GB'));
+    const periodPaymentDate = isConsolidated ? null : ({{ period.payment_date | tojson }} || new Date().toLocaleDateString('en-GB'));
+    // Use seller-level payment_date if set (e.g. "Unpaid"), otherwise use period payment date
+    const sellerPayDate = s.payment_date || null;
+    const isUnpaid = sellerPayDate && sellerPayDate.toLowerCase() === 'unpaid';
+    const paymentDate = isUnpaid ? 'Unpaid' : (sellerPayDate || periodPaymentDate);
     const invoiceTitle = isConsolidated ? 'Consolidated Seller Ledger' : 'Seller Payout';
     const periodText = isConsolidated ? 'All Periods (Consolidated)' : periodLabel;
     let payoutNum, metaRows;
@@ -438,6 +442,9 @@ document.getElementById('downloadInvoiceBtn').addEventListener('click', () => {
     if (isConsolidated) {
         payoutNum = 'BP-CL-' + new Date().getFullYear();
         metaRows = `<tr><td class="label">Ref #</td><td class="value">${payoutNum}</td></tr><tr><td class="label">Generated</td><td class="value">${new Date().toLocaleDateString('en-GB')}</td></tr><tr><td class="label">Status</td><td class="value">Paid</td></tr><tr><td class="label">Scope</td><td class="value">All Periods</td></tr>`;
+    } else if (isUnpaid) {
+        payoutNum = 'BP-PO-HOLD';
+        metaRows = `<tr><td class="label">Payout #</td><td class="value">${payoutNum}</td></tr><tr><td class="label">Payment Date</td><td class="value" style="color:#dc2626;font-weight:700">Unpaid</td></tr><tr><td class="label">Status</td><td class="value" style="color:#dc2626;font-weight:700">On Hold</td></tr><tr><td class="label">Period</td><td class="value">${periodLabel}</td></tr>`;
     } else {
         const pdParts = paymentDate.split('/');
         payoutNum = 'BP-PO-' + pdParts[2] + '-' + pdParts[1] + pdParts[0];
