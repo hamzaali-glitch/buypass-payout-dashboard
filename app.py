@@ -148,8 +148,9 @@ def logout():
 
 # ===== Dashboard Routes =====
 
-def get_all_periods():
-    return db_fetchall('SELECT * FROM periods ORDER BY sort_date DESC')
+def get_all_periods(channel='marketplace'):
+    ph = '%s' if DATABASE_URL else '?'
+    return db_fetchall(f'SELECT * FROM periods WHERE channel = {ph} ORDER BY sort_date DESC', (channel,))
 
 
 def get_period_data(period_id):
@@ -202,11 +203,11 @@ def get_seller_orders(period_id, store_name):
     return orders, seller
 
 
-def get_all_periods_data():
+def get_all_periods_data(channel='marketplace'):
     """Aggregate sellers across all periods for consolidated ledger view."""
     ph = '%s' if DATABASE_URL else '?'
     # Aggregate sellers: group by store, sum amounts and orders
-    sellers = db_fetchall('''
+    sellers = db_fetchall(f'''
         SELECT s.store,
                SUM(s.amount) as amount,
                SUM(s.total_orders) as total_orders,
@@ -216,9 +217,11 @@ def get_all_periods_data():
                MAX(s.account_title) as account_title,
                COUNT(DISTINCT s.period_id) as periods_count
         FROM sellers s
+        JOIN periods p ON s.period_id = p.id
+        WHERE p.channel = {ph}
         GROUP BY s.store
         ORDER BY SUM(s.amount) DESC
-    ''')
+    ''', (channel,))
     total_sellers = len(sellers)
     total_orders = sum(s['total_orders'] for s in sellers)
     total_payout = sum(s['amount'] for s in sellers)
@@ -265,17 +268,19 @@ def get_all_periods_seller_orders(store_name):
 @app.route('/')
 @login_required
 def index():
-    periods = get_all_periods()
+    channel = request.args.get('channel', 'marketplace')
+    periods = get_all_periods(channel)
     if periods:
-        return redirect(url_for('dashboard', period_id=periods[0]['id']))
+        return redirect(url_for('dashboard', period_id=periods[0]['id'], channel=channel))
     return render_template('no_data.html', user=session.get('user'))
 
 
 @app.route('/dashboard/all')
 @login_required
 def dashboard_all():
-    periods = get_all_periods()
-    period, sellers, totals = get_all_periods_data()
+    channel = request.args.get('channel', 'marketplace')
+    periods = get_all_periods(channel)
+    period, sellers, totals = get_all_periods_data(channel)
 
     logo_path = os.path.join(os.path.dirname(__file__), 'static', 'logo.png')
     with open(logo_path, 'rb') as lf:
@@ -290,16 +295,18 @@ def dashboard_all():
                            comparison=None,
                            logo_b64=logo_b64,
                            is_all_periods=True,
+                           channel=channel,
                            user=session.get('user'))
 
 
 @app.route('/dashboard/<int:period_id>')
 @login_required
 def dashboard(period_id):
-    periods = get_all_periods()
+    channel = request.args.get('channel', 'marketplace')
+    periods = get_all_periods(channel)
     period, sellers, totals, comparison = get_period_data(period_id)
     if not period:
-        return redirect(url_for('index'))
+        return redirect(url_for('index', channel=channel))
 
     # Load logo as base64 for invoice generation
     logo_path = os.path.join(os.path.dirname(__file__), 'static', 'logo.png')
@@ -315,6 +322,7 @@ def dashboard(period_id):
                            comparison=comparison,
                            logo_b64=logo_b64,
                            is_all_periods=False,
+                           channel=channel,
                            user=session.get('user'))
 
 

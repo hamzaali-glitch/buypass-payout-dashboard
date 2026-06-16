@@ -2,6 +2,14 @@
 {% block title %}{{ period.period_label }} - PayoutWatch{% endblock %}
 
 {% block header_controls %}
+<div style="display:flex;align-items:center;gap:6px;background:var(--chip-bg);border-radius:9999px;padding:3px;">
+    <a href="/?channel=marketplace" class="pill {% if channel == 'marketplace' %}pill-active{% endif %}" style="text-decoration:none;font-size:11px;padding:5px 14px;">
+        <i class="bi bi-shop-window" style="margin-right:4px"></i>Marketplace
+    </a>
+    <a href="/?channel=tv" class="pill {% if channel == 'tv' %}pill-active{% endif %}" style="text-decoration:none;font-size:11px;padding:5px 14px;">
+        <i class="bi bi-tv" style="margin-right:4px"></i>TV Orders
+    </a>
+</div>
 <select id="periodSelector" class="period-select">
     <option value="all" {% if current_period_id == 'all' %}selected{% endif %}>All Periods</option>
     {% for p in periods %}
@@ -194,11 +202,12 @@ const statusFilter = document.getElementById('statusFilter');
 const resultCount = document.getElementById('resultCount');
 
 // Period selector
+const currentChannel = {{ channel | tojson }};
 document.getElementById('periodSelector').addEventListener('change', function() {
     if (this.value === 'all') {
-        window.location.href = '/dashboard/all';
+        window.location.href = '/dashboard/all?channel=' + currentChannel;
     } else {
-        window.location.href = '/dashboard/' + this.value;
+        window.location.href = '/dashboard/' + this.value + '?channel=' + currentChannel;
     }
 });
 
@@ -380,7 +389,7 @@ function openSellerModal(storeName) {
                             <td>${o.user_city}</td>
                             <td class="text-center">${o.order_date}</td>
                             <td class="text-center">${o.delivery_date}</td>
-                            <td class="text-end" style="font-weight:600;color:#0777FF">${o.price.toLocaleString('en-PK', {maximumFractionDigits:0})}</td>
+                            <td class="text-end" style="font-weight:600;color:${o.commission === 1 ? '#00CC7A' : '#0777FF'}">${o.commission === 1 ? '<span class="badge-biz badge-exclusive" style="font-size:9px">Paid</span>' : o.price.toLocaleString('en-PK', {maximumFractionDigits:0})}</td>
                         </tr>`;
                     });
                     html += '</tbody></table>';
@@ -407,7 +416,7 @@ function openSellerModal(storeName) {
                         <td>${o.user_city}</td>
                         <td class="text-center">${o.order_date}</td>
                         <td class="text-center">${o.delivery_date}</td>
-                        <td class="text-end" style="font-weight:600;color:#0777FF">${o.price.toLocaleString('en-PK', {maximumFractionDigits:0})}</td>
+                        <td class="text-end" style="font-weight:600;color:${o.commission === 1 ? '#00CC7A' : '#0777FF'}">${o.commission === 1 ? '<span class="badge-biz badge-exclusive" style="font-size:9px">Paid</span>' : o.price.toLocaleString('en-PK', {maximumFractionDigits:0})}</td>
                     </tr>`;
                 });
                 html += '</tbody></table></div>';
